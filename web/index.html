@@ -249,12 +249,13 @@
             "ev": "house"
         };
 
-        function App() {
+        function SearchPage() {
             const [query, setQuery] = useState("");
             const [activeKeyword, setActiveKeyword] = useState("kedi");
             const [results, setResults] = useState([]);
             const [translatedKeyword, setTranslatedKeyword] = useState("cat");
             const [isLoading, setIsLoading] = useState(false);
+            const [error, setError] = useState(null);
             const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
             // Trigger search initially on load
@@ -270,62 +271,89 @@
             };
 
             const handleSearch = (searchWord) => {
-                const term = (searchWord !== undefined && searchWord !== null ? searchWord : query).trim().toLowerCase();
+                const term = (searchWord !== undefined && searchWord !== null ? searchWord : query).trim();
                 if (!term) {
                     showToast("Lütfen bir arama kelimesi girin.", "error");
                     return;
                 }
 
                 setIsLoading(true);
+                setError(null);
                 setActiveKeyword(term);
 
-                // English translation simulation
-                const translated = TRANSLATION_MAP[term] || `${term}-translated`;
-                setTranslatedKeyword(translated);
-
-                setTimeout(() => {
-                    let searchResults = [];
-
-                    if (MOCK_DATABASE[term]) {
-                        searchResults = MOCK_DATABASE[term];
-                    } else {
-                        // Generate dynamic mock database for search term that isn't in predefined dict
-                        const val = term.length % 10;
-                        const score1 = parseFloat((0.90 + (val / 150)).toFixed(2));
-                        const score2 = parseFloat((0.10 + (val / 150)).toFixed(2));
-                        const score3 = parseFloat((0.80 + (val / 150)).toFixed(2));
-
-                        searchResults = [
-                            { 
-                                url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800", 
-                                is_verified: true, 
-                                score: score1, 
-                                original_url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800" 
-                            },
-                            { 
-                                url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800", 
-                                is_verified: false, 
-                                score: score2, 
-                                original_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800",
-                                reason: `${term.charAt(0).toUpperCase() + term.slice(1)} aramasında ilgisiz nesne algılandı.`
-                            },
-                            { 
-                                url: "https://images.unsplash.com/photo-1472214222541-d510753a8707?w=800", 
-                                is_verified: true, 
-                                score: score3, 
-                                original_url: "https://images.unsplash.com/photo-1472214222541-d510753a8707?w=800" 
-                            }
-                        ];
+                fetch("http://127.0.0.1:8000/api/v1/pipeline/search", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ keyword: term })
+                })
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`API hatası: ${res.status} ${res.statusText}`);
                     }
-
-                    setResults(searchResults);
+                    return res.json();
+                })
+                .then(data => {
+                    setResults(data.results || []);
+                    setActiveKeyword(data.search_keyword);
+                    setTranslatedKeyword(data.translated_keyword);
                     setIsLoading(false);
-                    showToast(`"${term}" araması tamamlandı!`);
-                }, 600);
+                    showToast(`"${data.search_keyword}" araması başarıyla tamamlandı!`);
+                })
+                .catch(err => {
+                    console.error("Arama hatası:", err);
+                    setError(err.message || "Arama sırasında API bağlantısı kurulamadı veya sunucu hatası oluştu.");
+                    setIsLoading(false);
+                    showToast("Arama başarısız oldu.", "error");
+                });
             };
 
-            const handleDownload = (imgId, url) => {
-                showToast(`Görsel (${imgId}) başarıyla downloads/ klasörüne indirildi!`);
+            const handleDownload = async (imgId, url) => {
+                try {
+                    showToast(`Görsel (${imgId}) indiriliyor...`);
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error("Ağ yanıtı uygun değil.");
+                    const blob = await response.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+                    
+                    const link = document.createElement("a");
+                    link.href = blobUrl;
+                    
+                    // Determine file extension
+                    let extension = "jpg";
+                    const cleanUrl = url.split('?')[0].split('#')[0];
+                    const parts = cleanUrl.split('.');
+                    if (parts.length > 1) {
+                        const ext = parts[parts.length - 1].toLowerCase();
+                        if (ext === "jpg" || ext === "jpeg" || ext === "png" || ext === "webp" || ext === "gif") {
+                            extension = ext;
+                        }
+                    }
+                    
+                    link.download = `${imgId}.${extension}`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(blobUrl);
+                    
+                    showToast(`Görsel (${imgId}) başarıyla indirildi!`);
+                } catch (err) {
+                    console.warn("Blob indirme CORS veya ağ hatası nedeniyle yapılamadı, doğrudan link açılıyor...", err);
+                    try {
+                        const link = document.createElement("a");
+                        link.href = url;
+                        link.target = "_blank";
+                        link.download = `${imgId}.jpg`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        showToast(`CORS engeli: Yeni sekmede açıldı, sağ tıklayıp kaydedebilirsiniz.`);
+                    } catch (fallbackErr) {
+                        console.error("Yedek indirme başarısız:", fallbackErr);
+                        showToast("İndirme başarısız oldu.", "error");
+                    }
+                }
             };
 
             const verifiedImages = results.filter(item => item.is_verified);
@@ -365,7 +393,7 @@
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-400"></span>
                             </span>
-                            <span className="text-xs font-semibold text-cyan-400 tracking-wide glow-cyan-text">FastAPI Simülatörü Aktif</span>
+                            <span className="text-xs font-semibold text-cyan-400 tracking-wide glow-cyan-text">FastAPI Sunucusu Aktif</span>
                         </div>
                     </header>
 
@@ -430,7 +458,7 @@
                                 <div className="flex items-center gap-2.5">
                                     <h2 className="font-serif text-xl font-bold text-white tracking-wide">Onaylanan Sonuçlar</h2>
                                     <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-bold">
-                                        {verifiedImages.length} Görsel
+                                        {error ? '0' : verifiedImages.length} Görsel
                                     </span>
                                 </div>
                                 <div className="text-xs text-slate-400 font-medium">
@@ -439,10 +467,24 @@
                                 </div>
                             </div>
 
-                            {isLoading ? (
+                            {error ? (
+                                <div className="bg-rose-950/20 border border-rose-500/20 rounded-3xl p-12 text-center backdrop-blur-md shadow-2xl flex flex-col items-center justify-center">
+                                    <div className="text-rose-500 mb-4 bg-rose-500/10 p-4 rounded-full border border-rose-500/25">
+                                        <IconShieldAlert />
+                                    </div>
+                                    <h3 className="font-serif text-lg font-bold text-rose-450">Arama Sırasında Hata Oluştu</h3>
+                                    <p className="text-xs text-rose-350 mt-2 max-w-md mx-auto">{error}</p>
+                                    <button 
+                                        onClick={() => handleSearch(activeKeyword)}
+                                        className="mt-6 bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 font-semibold text-xs py-2.5 px-6 rounded-xl border border-rose-500/30 transition-all active:scale-95 inline-flex items-center gap-2"
+                                    >
+                                        Yeniden Dene
+                                    </button>
+                                </div>
+                            ) : isLoading ? (
                                 <div className="py-20 flex flex-col items-center justify-center gap-3">
                                     <div className="w-10 h-10 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin"></div>
-                                    <p class="text-sm text-purple-400 font-medium animate-pulse">Görseller yapay zeka tarafından taranıyor...</p>
+                                    <p className="text-sm text-purple-400 font-medium animate-pulse">Görseller yapay zeka tarafından taranıyor...</p>
                                 </div>
                             ) : verifiedImages.length === 0 ? (
                                 <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center backdrop-blur-md shadow-2xl">
@@ -453,12 +495,12 @@
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     {verifiedImages.map((img, index) => {
-                                        const imgId = `img_${index + 1}`;
+                                        const imgId = img.image_id || `img_${index + 1}`;
                                         return (
                                             <div key={index} className="glass-card-verified rounded-3xl overflow-hidden flex flex-col">
                                                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-900 group">
                                                     <img 
-                                                        src={img.url} 
+                                                        src={img.original_url} 
                                                         alt={activeKeyword}
                                                         className="w-full h-full object-cover transition-all duration-750 group-hover:scale-105"
                                                         onError={(e) => {
@@ -469,7 +511,7 @@
                                                     {/* AI Güven Skoru Rozeti */}
                                                     <div className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md text-white rounded-full py-1.5 px-3.5 flex items-center gap-1.5 shadow-md border border-white/10">
                                                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                                        <span className="text-xs font-semibold text-emerald-400">AI Skor: %{Math.round(img.score * 100)}</span>
+                                                        <span className="text-xs font-semibold text-emerald-400">%{Math.round(img.confidence_score * 100)} Güven</span>
                                                     </div>
 
                                                     {/* Onay tiki */}
@@ -494,7 +536,7 @@
                                                         className="w-full bg-purple-500/10 hover:bg-purple-500/25 text-purple-300 font-semibold text-xs py-3 px-4 rounded-xl transition-all duration-200 border border-purple-500/30 flex items-center justify-center gap-1.5 group active:scale-95 hover:shadow-[0_0_15px_rgba(168,85,247,0.15)]"
                                                     >
                                                         <IconDownload />
-                                                        <span>Galeriye İndir</span>
+                                                        <span>İndir</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -521,7 +563,11 @@
                                     <p className="text-[11px] text-slate-450 mt-1 font-light leading-relaxed">Yapay zeka nesne doğrulamadan geçemeyen elenmiş Pixabay sonuçları (Mentör Demolu).</p>
                                 </div>
 
-                                {isLoading ? (
+                                {error ? (
+                                    <div className="py-8 text-center text-rose-400/70 text-xs">
+                                        Hata nedeniyle elenen görseller yüklenemedi.
+                                    </div>
+                                ) : isLoading ? (
                                     <div className="py-12 flex flex-col items-center justify-center gap-2">
                                         <div className="w-6 h-6 border-2 border-rose-500/20 border-t-rose-500 rounded-full animate-spin"></div>
                                         <p className="text-[10px] text-rose-400 font-medium animate-pulse">Filtreleniyor...</p>
@@ -533,47 +579,60 @@
                                     </div>
                                 ) : (
                                     <div className="space-y-4 max-h-[580px] overflow-y-auto pr-1 custom-scrollbar">
-                                        {discardedImages.map((img, index) => (
-                                            <div key={index} className="glass-card-discarded rounded-2xl overflow-hidden p-3.5 relative flex flex-col gap-3">
-                                                
-                                                {/* Image header with badged low confidence */}
-                                                <div className="relative aspect-[3/2] w-full rounded-xl overflow-hidden bg-slate-950">
-                                                    <img 
-                                                        src={img.url} 
-                                                        alt="Elenen"
-                                                        className="w-full h-full object-cover filter grayscale-[50%] brightness-75 contrast-125"
-                                                        onError={(e) => {
-                                                            e.target.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600';
-                                                        }}
-                                                    />
+                                        {discardedImages.map((img, index) => {
+                                            const imgId = img.image_id || `img_elenen_${index + 1}`;
+                                            return (
+                                                <div key={index} className="glass-card-discarded rounded-2xl overflow-hidden p-3.5 relative flex flex-col gap-3">
                                                     
-                                                    {/* Kırmızı X işareti */}
-                                                    <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white rounded-full p-1.5 shadow-md shadow-rose-500/30 flex items-center justify-center border border-rose-400/40">
-                                                        <IconX />
+                                                    {/* Image header with badged low confidence */}
+                                                    <div className="relative aspect-[3/2] w-full rounded-xl overflow-hidden bg-slate-950">
+                                                        <img 
+                                                            src={img.original_url} 
+                                                            alt="Elenen"
+                                                            className="w-full h-full object-cover filter grayscale-[50%] brightness-75 contrast-125"
+                                                            onError={(e) => {
+                                                                e.target.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600';
+                                                            }}
+                                                        />
+                                                        
+                                                        {/* Kırmızı X işareti */}
+                                                        <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white rounded-full p-1.5 shadow-md shadow-rose-500/30 flex items-center justify-center border border-rose-400/40">
+                                                            <IconX />
+                                                        </div>
+
+                                                        {/* Düşük Güven Skoru */}
+                                                        <div className="absolute bottom-2 left-2 bg-black/85 backdrop-blur-sm text-white rounded-md py-0.5 px-2 flex items-center gap-1 shadow-sm border border-white/5">
+                                                            <span className="text-[10px] font-semibold text-rose-400">%{Math.round(img.confidence_score * 100)} Güven</span>
+                                                        </div>
                                                     </div>
 
-                                                    {/* Düşük Güven Skoru */}
-                                                    <div className="absolute bottom-2 left-2 bg-black/85 backdrop-blur-sm text-white rounded-md py-0.5 px-2 flex items-center gap-1 shadow-sm border border-white/5">
-                                                        <span className="text-[10px] font-semibold text-rose-400">AI Skor: %{Math.round(img.score * 100)}</span>
-                                                    </div>
-                                                </div>
+                                                    {/* Elenme detayları */}
+                                                    <div className="space-y-2 flex-1 flex flex-col justify-between gap-3">
+                                                        <div className="space-y-2">
+                                                            <div className="flex items-center justify-between text-[10px]">
+                                                                <span className="text-rose-400 font-bold uppercase tracking-wider">Durum: Elendi</span>
+                                                                <span className="font-mono text-slate-450">{imgId}</span>
+                                                            </div>
+                                                            <p className="text-[11px] text-rose-350 leading-normal bg-rose-500/5 border border-rose-500/10 rounded-lg p-2.5 italic font-light">
+                                                                {`"${activeKeyword.charAt(0).toUpperCase() + activeKeyword.slice(1)}" aranırken nesne doğrulanamadı.`}
+                                                            </p>
+                                                            
+                                                            <div className="text-[10px] text-slate-400 truncate">
+                                                                Kaynak URL: <a href={img.original_url} target="_blank" rel="noreferrer" className="text-slate-450 hover:text-rose-400 transition-colors duration-200">{img.original_url}</a>
+                                                            </div>
+                                                        </div>
 
-                                                {/* Elenme detayları */}
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center justify-between text-[10px]">
-                                                        <span className="text-rose-400 font-bold uppercase tracking-wider">Durum: Elendi</span>
-                                                        <span className="text-slate-450 font-mono">img_elenen_{index + 1}</span>
-                                                    </div>
-                                                    <p className="text-[11px] text-rose-350 leading-normal bg-rose-500/5 border border-rose-500/10 rounded-lg p-2.5 italic font-light">
-                                                        "{img.reason || 'Aranan nesne görselde doğrulanamadı.'}"
-                                                    </p>
-                                                    
-                                                    <div className="text-[10px] text-slate-400 truncate">
-                                                        URL: <a href={img.original_url} target="_blank" rel="noreferrer" className="text-slate-450 hover:text-rose-400 transition-colors duration-200">{img.original_url}</a>
+                                                        <button 
+                                                            onClick={() => handleDownload(imgId, img.original_url)}
+                                                            className="w-full bg-rose-500/10 hover:bg-rose-500/25 text-rose-300 font-semibold text-xs py-2.5 px-4 rounded-xl transition-all duration-200 border border-rose-500/30 flex items-center justify-center gap-1.5 group active:scale-95 hover:shadow-[0_0_15px_rgba(239,68,68,0.15)]"
+                                                        >
+                                                            <IconDownload />
+                                                            <span>İndir</span>
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -593,7 +652,7 @@
                             </p>
                         </div>
                         <div className="text-xs text-slate-500 text-right shrink-0 font-medium">
-                            PicFetch Projesi &copy; 2026. Tüm hakları saklıdır.
+                             PicFetch Projesi &copy; 2026. Tüm hakları saklıdir.
                         </div>
                     </footer>
 
@@ -602,7 +661,7 @@
         }
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        root.render(<SearchPage />);
     </script>
 </body>
 </html>
