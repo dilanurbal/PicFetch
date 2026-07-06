@@ -1,0 +1,6 @@
+# Güvenlik: .env dosyasını asla GitHub'a gönderme
+.env
+
+# Python derleme dosyaları
+__pycache__/
+*.py[cod]
