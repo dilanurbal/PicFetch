@@ -5,3 +5,4 @@ __pycache__/
 models/
 downloads/
 results/
+*.pt
