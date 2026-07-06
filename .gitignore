@@ -6,3 +6,4 @@ models/
 downloads/
 results/
 *.pt
+mobileclip2_b.ts
