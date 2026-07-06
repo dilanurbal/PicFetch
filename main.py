@@ -1,5 +1,7 @@
+import os
 import uvicorn
 from fastapi import FastAPI, Response
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from models import SearchRequest, DetectionResult, PipelineResponse
 
@@ -23,16 +25,17 @@ app.add_middleware(
 def favicon():
     return Response(status_code=204)
 
-# 4. Kök endpoint: Sağlık/Hoş geldin mesajı
-@app.get("/")
+# 4. Kök endpoint: Modern Arayüzü (web/index.html) sunar
+@app.get("/", response_class=HTMLResponse)
 def read_root():
     """
-    Sağlık ve hoş geldin mesajı dönen kök endpoint.
+    Kullanıcı arayüzünü (HTML) dönen kök endpoint.
     """
-    return {
-        "status": "success",
-        "message": "PicFetch Web Backend Sunucusuna Hoş Geldiniz!"
-    }
+    filepath = os.path.join(os.path.dirname(__file__), "web", "index.html")
+    if os.path.exists(filepath):
+        with open(filepath, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h3>Arayüz dosyası bulunamadı.</h3>", status_code=404)
 
 # 4. Arama pipeline POST endpoint'i
 @app.post("/api/v1/pipeline/search", response_model=PipelineResponse)
