@@ -1,6 +1,6 @@
 # PicFetch
 
-# 🔍 Görsel Bulma ve Doğrulama Uygulaması
+# 🔍  Görsel Bulma ve Doğrulama Uygulaması
 
 Bu proje, kullanıcının yazdığı bir kelimeye göre internetten (Pixabay/Pexels API) yasal ve ücretsiz görseller bulan, bu görselleri indiren ve her görselde aranan nesnenin gerçekten olup olmadığını açık-sözlüklü yapay zekâ modeli (**YOLOE-26**) ile doğrulayan uçtan uca bir uygulamadır.
 
