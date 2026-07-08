@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import List, Dict
 from .mapping import translate_to_english
 from .search import ImageSearcher
-from .detector import ObjectDetector  # Detector modülü hazır olduğunu varsayıyoruz
+from .detector import save_detection
 from .cleanup import cleanup_downloads
 from .config import get_config
 
@@ -24,7 +24,6 @@ class ImagePipeline:
         
         # Modülleri başlat
         self.searcher = ImageSearcher()
-        self.detector = ObjectDetector()  # Detector'ı başlat
         self.confidence_threshold = config.get("confidence_threshold", 0.5)
         self.max_images = config.get("max_images", 10)
     
@@ -67,10 +66,8 @@ class ImagePipeline:
                 print("   ⚠️ Hiç sonuç bulunamadı!")
                 return []
             
-            # ADIM 3: YOLOE-26 için hedef sınıfı ayarla
-            print(f"\n3️⃣ YOLOE-26 modeli '{english_query}' sınıfına ayarlanıyor...")
-            self.detector.set_classes([english_query])
-            print(f"   ✅ Model hazır")
+            # ADIM 3: YOLOE-26 modeli hazırlandı
+            print(f"\n3️⃣ YOLOE-26 modeli '{english_query}' sınıfını algılayacak.")
             
             # ADIM 4: Her görseli indir ve doğrula
             print(f"\n4️⃣ Görseller indiriliyor ve doğrulanıyor...")
@@ -92,35 +89,22 @@ class ImagePipeline:
                 
                 print(f"   ✅ İndirildi: {filepath}")
                 
-                # ADIM 5: YOLOE-26 ile nesne tespiti
+                # ADIM 5: YOLOE-26 ile nesne tespiti ve işaretli kaydetme
                 print(f"   🔎 YOLOE-26 ile doğrulama yapılıyor...")
-                detection_result = self.detector.detect(filepath)
+                is_valid, confidence, output_path = save_detection(filepath, english_query)
                 
-                # Sonuçları işle
-                if detection_result and len(detection_result) > 0:
-                    # Nesne bulundu
-                    best_detection = max(detection_result, key=lambda x: x['confidence'])
-                    is_valid = best_detection['confidence'] >= self.confidence_threshold
-                    
-                    result = {
-                        "filepath": filepath,
-                        "is_valid": is_valid,
-                        "confidence": best_detection['confidence'],
-                        "label": best_detection.get('label', english_query)
-                    }
-                    
-                    status = "✅ DOĞRULANDI" if is_valid else "❌ ELENEDİ"
-                    print(f"   {status} (Güven: {best_detection['confidence']:.2%})")
-                    
+                result = {
+                    "filepath": output_path if is_valid else filepath,
+                    "is_valid": is_valid,
+                    "confidence": confidence,
+                    "label": english_query
+                }
+                
+                if is_valid:
+                    print(f"   ✅ DOĞRULANDI (Güven: {confidence:.2%})")
+                    print(f"   💾 İşaretlenmiş görsel kaydedildi: {output_path}")
                 else:
-                    # Nesne bulunamadı
-                    result = {
-                        "filepath": filepath,
-                        "is_valid": False,
-                        "confidence": 0.0,
-                        "label": english_query
-                    }
-                    print(f"   ❌ ELENEDİ (Nesne bulunamadı)")
+                    print(f"   ❌ ELENEDİ (Güven: {confidence:.2%})")
                 
                 results.append(result)
             
