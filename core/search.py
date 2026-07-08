@@ -36,7 +36,7 @@ if __name__ == "__main__":
     print("Search Modülü Testi")
     print(" ")
 
-    found = search_images("dog", limit=20)
+    found = search_images("dog", limit=10)
     print(f"Bulunan {len(found)} görsel: ")
     for url in found:
         print(f" - {url}")
