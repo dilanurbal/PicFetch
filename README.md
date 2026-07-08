@@ -151,10 +151,10 @@ Sistem, demoda ve canlı ortamda karşılaşılabilecek olası aksaklıklara kar
 
 ## 👥 Katkıda Bulunanlar (Contributors)
 
-*   **Dilanur Bal**
-*   **Mert Atmaca**
-*   **Ayşen Çiftçi**
-*   **Ayşe Semra Yaslan**
+*   **Dilanur Bal (https://github.com/dilanurbal)**
+*   **Mert Atmaca(https://github.com/MertAtmacaDev)**
+*   **Ayşen Çiftçi(https://github.com/aysenciftci23)**
+*   **Ayşe Semra Yaslan(https://github.com/semra2314)**
 
 ---
 
