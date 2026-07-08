@@ -9,7 +9,4 @@ downloads/
 results/
 *.pt
 mobileclip2_b.ts
-*.pt
 *.ts
-results/
-.env
