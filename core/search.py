@@ -1,111 +1,53 @@
 """
-search.py - Görsel Arama ve İndirme Modülü
+search.py - Görsel Arama Modülü
 
-Pixabay API'sini kullanarak görsel arar ve bulunan görselleri
-geçici bir klasöre indirir.
+DuckDuckGo Images API'sini kullanarak görsel arar ve bulunan görsellerin
+URL Listesini döndürür. Retry logic ile hata toleransı sağlar.
 """
 
-import os
-import requests
-from pathlib import Path
-from dotenv import load_dotenv
+import sys
+import time
+from ddgs import DDGS
 
-# .env dosyasındaki değişkenleri yükle
-load_dotenv()
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 
-class ImageSearcher:
-    def __init__(self):
-        # API Key'i .env dosyasından al
-        self.api_key = os.getenv("PIXABAY_API_KEY")
-        self.base_url = "https://pixabay.com/api/"
-        
-        if not self.api_key or self.api_key == "ornek_api_key_buraya":
-            raise ValueError("HATA: .env dosyasında geçerli bir PIXABAY_API_KEY bulunamadı!")
 
-    def search_images(self, query: str, per_page: int = 5) -> list:
-        """
-        Pixabay'de görsel arar.
-        
-        Args:
-            query: Arama yapılacak İngilizce kelime (örn: "horse")
-            per_page: Kaç tane görsel getirileceği
-        
-        Returns:
-            Görsel URL'lerinin listesi
-        """
-        params = {
-            "key": self.api_key,
-            "q": query,
-            "image_type": "photo",
-            "per_page": per_page,
-            "safesearch": "true"
-        }
-        
+def search_images(query: str, limit: int = 10, max_attempts: int = 3) -> list[str]:
+    """
+    DuckDuckGo'da görsel arar.
+    
+    Args:
+        query: Arama yapılacak kelime
+        limit: Kaç tane görsel getirileceği
+        max_attempts: Başarısız olursa kaç kez tekrar dene
+    
+    Returns:
+        Görsel URL'lerinin listesi
+    """
+    for attempt in range(1, max_attempts + 1):
         try:
-            response = requests.get(self.base_url, params=params, timeout=10)
-            response.raise_for_status() # Hata varsa durdur
-            data = response.json()
-            
-            # Sadece büyük boyutlu görsel linklerini al
-            image_urls = [hit["largeImageURL"] for hit in data.get("hits", [])]
-            return image_urls
-            
-        except requests.exceptions.RequestException as e:
-            print(f"API Hatası: {e}")
-            return []
-
-    def download_image(self, url: str, save_dir: str = "downloads") -> str:
-        """
-        Tek bir görseli indirir.
+            result = DDGS().images(query, max_results=limit)
+            urls = [r["image"] for r in result]
+            return urls
         
-        Args:
-            url: İndirilecek görselin linki
-            save_dir: Kaydedileceği klasör
-        
-        Returns:
-            İndirilen dosyanın tam yolu (başarılıysa), boş string (başarısızsa)
-        """
-        try:
-            # Klasör yoksa oluştur
-            Path(save_dir).mkdir(parents=True, exist_ok=True)
-            
-            # Görseli indir
-            response = requests.get(url, timeout=15)
-            response.raise_for_status()
-            
-            # Dosya adı oluştur (URL'den son kısmı al)
-            filename = url.split("/")[-1]
-            filepath = os.path.join(save_dir, filename)
-            
-            # Dosyayı kaydet
-            with open(filepath, "wb") as f:
-                f.write(response.content)
-            
-            return filepath
-            
         except Exception as e:
-            print(f"İndirme Hatası ({url}): {e}")
-            return ""
+            print(f"Deneme {attempt}/{max_attempts} başarısız: {e}")
+            
+            if attempt < max_attempts:
+                time.sleep(2)
+    
+    print(f"'{query}' için {max_attempts} denemede de sonuç alınamadı.")
+    return []
 
 
-# Test etmek için
 if __name__ == "__main__":
     print("🧪 Search Modülü Testi")
     print("=" * 40)
     
-    # Arama yap
-    searcher = ImageSearcher()
-    urls = searcher.search_images("horse", per_page=3)
-    
-    print(f"Bulunan {len(urls)} görsel:")
-    for url in urls:
+    found = search_images("dog", limit=10)
+    print(f"Bulunan {len(found)} görsel:")
+    for url in found:
         print(f"  - {url}")
-    
-    # İlk görseli indir
-    if urls:
-        print("\nİlk görsel indiriliyor...")
-        filepath = searcher.download_image(urls[0])
-        if filepath:
-            print(f"✅ Başarıyla indirildi: {filepath}")
-        else:
-            print(" İndirme başarısız oldu.")

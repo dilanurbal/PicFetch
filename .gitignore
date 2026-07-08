@@ -1,6 +1,12 @@
-# Güvenlik: .env dosyasını asla GitHub'a gönderme
 .env
-
-# Python derleme dosyaları
+venv/
+.venv/
+.idea/
 __pycache__/
-*.py[cod]
+*.pyc
+models/
+downloads/
+results/
+*.pt
+mobileclip2_b.ts
+*.ts
