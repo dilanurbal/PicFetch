@@ -7,25 +7,36 @@ URL Listesini döndürür. İndirme modülü burada yok o pipeline'da.
 
 import sys
 from ddgs import DDGS
+import time
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 if hasattr(sys.stderr, 'reconfigure'):
     sys.stderr.reconfigure(encoding='utf-8')
 
-def search_images(query: str, limit: int = 10) -> list[str]:
-    results = DDGS().images(query, max_results=limit)
+def search_images(query: str, limit: int = 10, max_attempts: int = 3) -> list[str]:
+    for attempt in range(1, max_attempts + 1):
+        try:
+            result = DDGS().images(query, max_results=limit)
+            urls =[r["image"] for r in result]
+            return urls
+        
+        except Exception as e:
+            print(f"Deneme {attempt}/{max_attempts} başarısız: {e}")
 
-    urls = [r["image"] for r in results]
+            if attempt < max_attempts:
+                time.sleep(2)
 
-    return urls
+    print(f"'{query}' için {max_attempts} denemede de sonuç alınamadı.")
+    return []
+
 
 
 if __name__ == "__main__":
     print("Search Modülü Testi")
     print(" ")
 
-    found = search_images("dog", limit=50)
+    found = search_images("dog", limit=20)
     print(f"Bulunan {len(found)} görsel: ")
     for url in found:
         print(f" - {url}")
