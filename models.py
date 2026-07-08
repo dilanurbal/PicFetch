@@ -21,3 +21,8 @@ class PipelineResponse(BaseModel):
     search_keyword: str
     translated_keyword: str
     results: List[DetectionResult]
+
+
+class DownloadRequest(BaseModel):
+    image_ids: List[str]
+
