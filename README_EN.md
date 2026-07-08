@@ -151,10 +151,10 @@ The system is designed to be resilient against issues that may come up in demos 
 
 ## 👥 Contributors
 
-*   **Dilanur Bal**
-*   **Mert Atmaca**
-*   **Ayşen Çiftçi**
-*   **Ayşe Semra Yaslan**
+*   **Dilanur Bal (https://github.com/dilanurbal)**
+*   **Mert Atmaca(https://github.com/MertAtmacaDev)**
+*   **Ayşen Çiftçi(https://github.com/aysenciftci23)**
+*   **Ayşe Semra Yaslan(https://github.com/semra2314)**
 
 ---
 
