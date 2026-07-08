@@ -1,10 +1,14 @@
 # PicFetch
 
+🇬🇧 [English version](README_EN.md)
+
 # 🔍  Görsel Bulma ve Doğrulama Uygulaması
 
 Bu proje, kullanıcının yazdığı bir kelimeye göre internetten (Pixabay/Pexels API) yasal ve ücretsiz görseller bulan, bu görselleri indiren ve her görselde aranan nesnenin gerçekten olup olmadığını açık-sözlüklü yapay zekâ modeli (**YOLOE-26**) ile doğrulayan uçtan uca bir uygulamadır.
 
 Proje hem **Web Arayüzü (FastAPI + HTML/JS)** hem de **Komut Satırı (CLI - Typer)** üzerinden çalışabilecek şekilde "Tek Çekirdek, İki Yüz" mimarisiyle tasarlanmıştır. Tüm sistem **Docker (CPU-only)** ile paketlenerek taşınabilir hale getirilmiştir.
+
+**Repo:** https://github.com/dilanurbal/PicFetch.git
 
 ---
 
@@ -15,7 +19,7 @@ Uygulamanın arama, indirme, doğrulama ve filtreleme gibi tüm ana mantığı `
 ```text
 core/                  # Ortak Çekirdek (Core Pipeline)
 │  ├── search.py       # Görsel arama + API entegrasyonu + indirme
-│  ├── detector.py     # YOLOE-26 Sarmalayıcı (Model açılışta 1 kez yüklenir)
+│  ├── detector.py     # YOLOE-26 + SAM Sarmalayıcı (Modeller açılışta / ilk ihtiyaçta yüklenir)
 │  ├── pipeline.py     # Arama -> İndirme -> Tespit -> Filtreleme akışı
 │  ├── mapping.py      # Türkçe - İngilizce kelime eşleme tablosu
 │  └── config.py       # Ayarlar, model boyutları, eşikler ve API Key yönetimi
@@ -24,7 +28,7 @@ web/                   # Web Arayüzü Katmanı
 │  └── static/         # Sade HTML + CSS + JavaScript (Fetch API) frontend arayüzü
 cli/                   # Komut Satırı Katmanı
 │  └── __main__.py     # Typer tabanlı CLI uygulaması
-models/                # YOLOE-26 Ağırlıkları (Docker build sırasında indirilir)
+models/                # YOLOE-26 / SAM Ağırlıkları (Docker build sırasında indirilir)
 downloads/             # İndirilen görseller için geçici klasör (Disk dolmaması için temizlenir)
 tests/                 # Pytest test senaryoları
 Dockerfile             # Tek CPU imajı için çok aşamalı (multi-stage) Docker dosyası
@@ -38,6 +42,7 @@ requirements.txt       # Bağımlılık listesi (CPU-only PyTorch dahil)
 
 *   **Çekirdek Dil:** Python 3.11+
 *   **Nesne Tespiti & Yapay Zekâ:** Ultralytics, YOLOE-26 (Açık-sözlüklü / Open-vocabulary nesne tespiti)
+*   **Segmentasyon:** Meta SAM (Segment Anything Model — mobile_sam), piksel-piksel maske üretimi
 *   **Web Backend:** FastAPI + Uvicorn (Otomatik Swagger dokümantasyonu `/docs` adresindedir)
 *   **Web Frontend:** Pure HTML, CSS, JavaScript (Fetch API)
 *   **CLI (Komut Satırı):** Typer
@@ -56,9 +61,17 @@ requirements.txt       # Bağımlılık listesi (CPU-only PyTorch dahil)
 4.  **İndirme:** Görseller geçici olarak `downloads/` klasörüne indirilir.
 5.  **Doğrulama (AI):** Uygulama açılışında belleğe 1 kez yüklenen YOLOE-26 modeli, `set_classes(["horse"])` hedeflemesiyle her görseli tarar.
 6.  **Filtreleme & Skorlama:** Belirlenen güven eşiğinin (varsayılan `0.5`) üzerindeki nesneler Başarılı (`✓ [Güven Oranı]`), altındakiler ise Başarısız (`X`) olarak işaretlenir.
-7.  **Çıktı:** 
+7.  **Segmentasyon (opsiyonel):** İstenirse, YOLOE-26'nın bulduğu bounding box'lar SAM modeline (`mobile_sam`) prompt olarak verilir ve nesnenin piksel-piksel sınırlarını çizen bir segmentasyon maskesi üretilir. SAM, sadece ihtiyaç anında (lazy-loading) belleğe alınır, böylece segmentasyon kullanılmayan senaryolarda başlangıç süresi etkilenmez.
+8.  **Çıktı:**
     *   **Web'de:** Görsel grid yapısında gösterilir; her görselin üstünde `✓/X` etiketi, güven oranı ve indirme butonu yer alır.
     *   **CLI'da:** Doğrulamadan geçen başarılı görseller belirtilen çıktı klasörüne kaydedilir.
+
+---
+
+## 🧩 Öne Çıkan Özellikler
+
+*   **YOLOE-26 (Açık-sözlüklü Tespit):** Önceden tanımlı sınıflarla sınırlı kalmadan, kullanıcının girdiği herhangi bir kelimeyi (`set_classes`) hedef alarak nesne tespiti yapar.
+*   **SAM Segmentasyon Desteği:** YOLOE-26'nın ürettiği bounding box'lar Meta'nın SAM (mobile_sam) modeline aktarılır ve nesnenin sadece kutusu değil, gerçek piksel sınırları (maske) elde edilir. İki model aynı akış içinde birlikte çalışabilir; SAM modeli lazy-loading ile yüklenir, YOLOE-26'nın başlangıç performansını etkilemez.
 
 ---
 
@@ -70,8 +83,8 @@ requirements.txt       # Bağımlılık listesi (CPU-only PyTorch dahil)
 
 ```bash
 # Projeyi klonlayın
-git clone <repo-url>
-cd proje
+git clone https://github.com/dilanurbal/PicFetch.git
+cd PicFetch
 
 # Sanal ortam oluşturun ve aktif edin
 python -m venv venv
@@ -92,7 +105,11 @@ cp .env.example .env
 PIXABAY_API_KEY=your_api_key_here
 DEFAULT_MODEL_SIZE=small
 CONFIDENCE_THRESHOLD=0.5
+SAM_MODEL_SIZE=mobile
 ```
+
+#### Model Ağırlıkları Hakkında Not:
+YOLOE-26 ve SAM (mobile_sam) ağırlıkları repoya dahil değildir; `ultralytics` kütüphanesi, modeller ilk kez kullanıldığında bunları otomatik olarak indirir. Bu nedenle uygulamanın ilk çalıştırılışında (veya Docker build aşamasında) internet bağlantısı gereklidir.
 
 #### CLI Uygulamasını Çalıştırma:
 ```bash
@@ -132,11 +149,20 @@ Sistem, demoda ve canlı ortamda karşılaşılabilecek olası aksaklıklara kar
 
 ---
 
+## 👥 Katkıda Bulunanlar (Contributors)
+
+*   **Dilanur Bal**
+*   **Mert Atmaca**
+*   **Ayşen Çiftçi**
+*   **Ayşe Semra Yaslan**
+
+---
+
 ## 👥 Ekip Rol Dağılımı (4 Kişi)
 
 Proje, MVP (Minimum Viable Product) hedefine hızla ulaşmak için paralel iş paketlerine bölünmüştür:
 *   **Kişi 1 (Arama Modülü):** API entegrasyonu, key yönetimi, görsel indirme süreçleri, rate-limit ve cache yönetimi. (`search.py`, `config.py`)
-*   **Kişi 2 (Tespit Modülü):** YOLOE-26 entegrasyonu, model yükleme, `set_classes` mekanizması ve çıktı formatlama. (`detector.py`)
+*   **Kişi 2 (Tespit Modülü):** YOLOE-26 ve SAM entegrasyonu, model yükleme, `set_classes` mekanizması ve çıktı formatlama. (`detector.py`)
 *   **Kişi 3 (Web Katmanı):** FastAPI backend uç noktalarının yazılması ve HTML/JS tabanlı dinamik arama grid arayüzü. (`web/` klasörü)
 *   **Kişi 4 (CLI, Docker & Entegrasyon):** Typer CLI geliştirilmesi, Dockerfile mimarisinin kurulması, test senaryoları (`tests/`) ve modüllerin birleştirilmesi.
 
@@ -144,7 +170,6 @@ Proje, MVP (Minimum Viable Product) hedefine hızla ulaşmak için paralel iş p
 
 ## 💡 Önemli Geliştirici Notları
 
-1.  **Model Optimizasyonu:** Model, her HTTP isteğinde (request) yeniden **yüklenmez**. Uygulama ayağa kalkarken bir kez belleğe alınır ve ortak pipeline tarafından singleton mantığıyla kullanılır.
+1.  **Model Optimizasyonu:** Modeller, her HTTP isteğinde (request) yeniden **yüklenmez**. YOLOE-26 uygulama ayağa kalkarken bir kez belleğe alınır; SAM ise ilk ihtiyaç anında (lazy-loading) yüklenir. Her ikisi de ortak pipeline tarafından singleton mantığıyla kullanılır.
 2.  **Disk Yönetimi:** `downloads/` klasörüne indirilen görseller analiz edildikten ve istemciye/arayüze aktarıldıktan hemen sonra temizlenir. Sunucu disk alanı korunur.
 3.  **Doğrulama Görünürlüğü (Demo Uyarısı):** Stok görsel sitelerindeki (Pixabay/Pexels) fotoğraflar zaten yüksek kaliteli etiketlere sahip olduğundan aranan nesne neredeyse her görselde bulunacaktır ($✓$). Demoda sistemin çalıştığını (eleme yaptığını) kanıtlamak adına; arayüzde elenen görselleri tamamen gizlemek yerine **"Elenenler"** başlığı altında veya pasifize edilmiş $X$ işaretiyle güven oranlarıyla birlikte göstermek kritik önem taşımaktadır.
-
