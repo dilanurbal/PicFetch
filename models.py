@@ -23,6 +23,12 @@ class PipelineResponse(BaseModel):
     results: List[DetectionResult]
 
 
-class DownloadRequest(BaseModel):
-    image_ids: List[str]
+class ImageItem(BaseModel):
+    id: str
+    url: str
+
+
+class DownloadZipRequest(BaseModel):
+    selectedImageIds: List[str]
+    images: List[ImageItem]
 
