@@ -23,3 +23,14 @@ class PipelineResponse(BaseModel):
     search_keyword: str
     translated_keyword: str
     results: List[DetectionResult]
+
+
+class ImageItem(BaseModel):
+    id: str
+    url: str
+
+
+class DownloadZipRequest(BaseModel):
+    selectedImageIds: List[str]
+    images: List[ImageItem]
+

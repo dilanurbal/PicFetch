@@ -1,6 +1,7 @@
 .env
 venv/
 .venv/
+.idea/
 __pycache__/
 *.pyc
 models/
@@ -8,3 +9,4 @@ downloads/
 results/
 *.pt
 mobileclip2_b.ts
+*.ts
