@@ -49,11 +49,3 @@ def download_image(url):
         # İndirme başarısız olursa çökme, None dön (pipeline atlar)
         print(f"İndirme başarısız ({url}): {e}")
         return None
-    
-
-
-    
-
-if __name__ == "__main__":
-    sonuc = download_image("https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800")
-    print(f"İndirilen dosya: {sonuc}")
