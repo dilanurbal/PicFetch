@@ -314,7 +314,7 @@
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify({ keyword: term })
+                    body: JSON.stringify({ query: term })
                 })
                 .then(res => {
                     if (!res.ok) {

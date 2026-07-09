@@ -3,13 +3,9 @@ import uvicorn
 from fastapi import FastAPI, Response, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-
-# Model adları PR dallarında farklı olabilir; import hatası olmaması için esnek davranıyoruz.
-try:
-    from models import SearchRequest, DetectionResult, PipelineResponse, DownloadRequest, DownloadZipRequest
-except Exception:
-    # Eğer modellerden bazıları yoksa, higher-level işlemler sırasında getattr ile güvenli erişim kullanacağız.
-    from models import SearchRequest, DetectionResult, PipelineResponse
+from models import SearchRequest, DetectionResult, PipelineResponse
+from core.mapping import translate_query
+from core.mock_data import get_mock_images
 
 import io
 import zipfile
@@ -50,15 +46,15 @@ def read_root():
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h3>Arayüz dosyası bulunamadı.</h3>", status_code=404)
 
-# 4. Arama pipeline POST endpoint'i
+# 5. Arama pipeline POST endpoint'i
 @app.post("/api/v1/pipeline/search", response_model=PipelineResponse)
 def search_pipeline(payload: SearchRequest):
     """
     Görsel arama ve nesne tespiti boru hattını (pipeline) simüle eden endpoint.
     """
-    keyword = payload.keyword.strip()
+    keyword = payload.query.strip()
 
-    # Eğer payload.keyword boşsa veya 'çökert' ise boş sonuç dön
+    # Eğer payload.query boşsa veya 'çökert' ise boş sonuç dön
     if not keyword or keyword.lower() == "çökert":
         return PipelineResponse(
             search_keyword=keyword,
@@ -66,80 +62,11 @@ def search_pipeline(payload: SearchRequest):
             results=[]
         )
 
-    # Basit Türkçe-İngilizce kelime çevirisi simülasyonu
-    translation_map = {
-        "at": "horse",
-        "kedi": "cat",
-        "köpek": "dog",
-        "araba": "car",
-        "kuş": "bird",
-        "ağaç": "tree",
-        "çiçek": "flower",
-        "ev": "house"
-    }
-    
-    # Kelime eşleşiyorsa haritadan al, yoksa simüle etmek için sonuna '-translated' ekle
-    translated = translation_map.get(keyword.lower(), f"{keyword.lower()}-translated")
+    # translate_query ile SRP uyumlu çeviri işlemi
+    translated = translate_query(keyword, translate=payload.translate, target_lang=payload.target_lang)
 
-    # Kelime bazlı sahte görsel veritabanı (Unsplash kaynaklı - İndirilebilir & CORS hatasız)
-    mock_images_db = {
-        "at": [
-            {"url": "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=800", "is_verified": True, "score": 0.94},
-            {"url": "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800", "is_verified": False, "score": 0.12},
-            {"url": "https://images.unsplash.com/photo-1598974357801-cbca100e6543?w=800", "is_verified": True, "score": 0.88}
-        ],
-        "kedi": [
-            {"url": "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800", "is_verified": True, "score": 0.96},
-            {"url": "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800", "is_verified": False, "score": 0.08},
-            {"url": "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=800", "is_verified": True, "score": 0.91}
-        ],
-        "köpek": [
-            {"url": "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800", "is_verified": True, "score": 0.95},
-            {"url": "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800", "is_verified": False, "score": 0.15},
-            {"url": "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=800", "is_verified": True, "score": 0.89}
-        ],
-        "araba": [
-            {"url": "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800", "is_verified": True, "score": 0.97},
-            {"url": "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800", "is_verified": False, "score": 0.11},
-            {"url": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800", "is_verified": True, "score": 0.92}
-        ],
-        "ev": [
-            {"url": "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800", "is_verified": True, "score": 0.93},
-            {"url": "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800", "is_verified": False, "score": 0.14},
-            {"url": "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800", "is_verified": True, "score": 0.87}
-        ],
-        "ağaç": [
-            {"url": "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800", "is_verified": True, "score": 0.98},
-            {"url": "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800", "is_verified": False, "score": 0.05},
-            {"url": "https://images.unsplash.com/photo-1448375240586-882707db888b?w=800", "is_verified": True, "score": 0.90}
-        ],
-        "çiçek": [
-            {"url": "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=800", "is_verified": True, "score": 0.97},
-            {"url": "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800", "is_verified": False, "score": 0.09},
-            {"url": "https://images.unsplash.com/photo-1561181286-d3fee7d55364?w=800", "is_verified": True, "score": 0.93}
-        ],
-        "kuş": [
-            {"url": "https://images.unsplash.com/photo-1452570053594-1b985d6ea890?w=800", "is_verified": True, "score": 0.95},
-            {"url": "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800", "is_verified": False, "score": 0.13},
-            {"url": "https://images.unsplash.com/photo-1480069689960-5b3ff4b13390?w=800", "is_verified": True, "score": 0.87}
-        ]
-    }
-
-    # Eğer aranan kelime veritabanımızda tanımlıysa onu seç, yoksa genel/dinamik değerler üret
-    key_lower = keyword.lower()
-    if key_lower in mock_images_db:
-        selected_data = mock_images_db[key_lower]
-    else:
-        # Kelime uzunluğuna göre hafifçe değişen dinamik skorlar ve varsayılan manzara görselleri
-        val = len(keyword) % 10
-        score1 = round(0.90 + (val / 150), 2)
-        score2 = round(0.10 + (val / 150), 2)
-        score3 = round(0.80 + (val / 150), 2)
-        selected_data = [
-            {"url": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800", "is_verified": True, "score": score1},
-            {"url": "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800", "is_verified": False, "score": score2},
-            {"url": "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800", "is_verified": True, "score": score3}
-        ]
+    # get_mock_images ile statik/dinamik sahte görsel verilerini al
+    selected_data = get_mock_images(translated)
 
     # Sonuç listesini dinamik olarak oluştur
     results = [
@@ -159,12 +86,12 @@ def search_pipeline(payload: SearchRequest):
 
     return PipelineResponse(
         search_keyword=keyword,
-        translated_keyword=translated,
+        translated_keyword=translated if payload.translate else "",
         results=results
     )
 
-# 5. Görsel indirme ve ZIP paketi oluşturma POST endpoint'i
-# İki route’u da destekleyelim (esneklik için)
+# 6. Görsel indirme ve ZIP paketi oluşturma POST endpoint'i
+# İki route'u da destekleyelim (esneklik için)
 @app.post("/api/v1/images/download-zip")
 @app.post("/download-zip")
 def download_images_zip(payload):
