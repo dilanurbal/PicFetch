@@ -1,17 +1,22 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PicFetch - Yapay Zeka Destekli Görsel Doğrulama</title>
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap"
+        rel="stylesheet">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React and Babel CDNs -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Axios CDN -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -55,7 +60,7 @@
     <style type="text/css">
         body {
             background-color: #05020a;
-            background-image: 
+            background-image:
                 radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.18) 0px, transparent 45%),
                 radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.18) 0px, transparent 45%),
                 radial-gradient(at 50% 100%, rgba(6, 182, 212, 0.12) 0px, transparent 50%),
@@ -90,7 +95,7 @@
 
         .glass-card-verified:hover {
             transform: translateY(-6px) scale(1.015);
-            box-shadow: 
+            box-shadow:
                 0 25px 45px -10px rgba(0, 0, 0, 0.6),
                 0 0 20px 0 rgba(168, 85, 247, 0.2);
             border-color: rgba(168, 85, 247, 0.4);
@@ -109,7 +114,7 @@
             background: rgba(239, 68, 68, 0.06);
             border-color: rgba(239, 68, 68, 0.28);
             transform: translateY(-2px) scale(1.01);
-            box-shadow: 
+            box-shadow:
                 0 10px 30px rgba(239, 68, 68, 0.15),
                 0 0 15px rgba(239, 68, 68, 0.08);
         }
@@ -118,21 +123,31 @@
         .custom-scrollbar::-webkit-scrollbar {
             width: 5px;
         }
+
         .custom-scrollbar::-webkit-scrollbar-track {
             background: transparent;
         }
+
         .custom-scrollbar::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.06);
             border-radius: 99px;
         }
+
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.15);
         }
 
         /* Micro-animations */
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .animate-fade-in {
@@ -140,6 +155,7 @@
         }
     </style>
 </head>
+
 <body class="min-h-screen text-slate-200 antialiased py-8 px-4 sm:px-6 md:px-12">
     <div id="root" class="max-w-7xl mx-auto"></div>
 
@@ -217,24 +233,24 @@
         // Mock Database corresponding to backend data
         const MOCK_DATABASE = {
             "at": [
-                { url: "https://cdn.pixabay.com/photo/2017/02/15/11/05/texture-2068278_1280.jpg", is_verified: true, score: 0.94, original_url: "https://cdn.pixabay.com/photo/2017/02/15/11/05/texture-2068278_1280.jpg" },
-                { url: "https://cdn.pixabay.com/photo/2016/11/14/17/39/dog-1824166_1280.jpg", is_verified: false, score: 0.12, original_url: "https://cdn.pixabay.com/photo/2016/11/14/17/39/dog-1824166_1280.jpg", reason: "At görseli aranırken köpek tespit edildi." },
-                { url: "https://cdn.pixabay.com/photo/2016/11/29/04/18/horse-1867278_1280.jpg", is_verified: true, score: 0.88, original_url: "https://cdn.pixabay.com/photo/2016/11/29/04/18/horse-1867278_1280.jpg" }
+                { url: "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=800", is_verified: true, score: 0.94, original_url: "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=800" },
+                { url: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800", is_verified: false, score: 0.12, original_url: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800", reason: "At görseli aranırken köpek tespit edildi." },
+                { url: "https://images.unsplash.com/photo-1598974357801-cbca100e6543?w=800", is_verified: true, score: 0.88, original_url: "https://images.unsplash.com/photo-1598974357801-cbca100e6543?w=800" }
             ],
             "kedi": [
-                { url: "https://cdn.pixabay.com/photo/2017/02/20/18/03/cat-2083492_1280.jpg", is_verified: true, score: 0.96, original_url: "https://cdn.pixabay.com/photo/2017/02/20/18/03/cat-2083492_1280.jpg" },
-                { url: "https://cdn.pixabay.com/photo/2016/11/14/17/39/dog-1824166_1280.jpg", is_verified: false, score: 0.08, original_url: "https://cdn.pixabay.com/photo/2016/11/14/17/39/dog-1824166_1280.jpg", reason: "Kedi görseli aranırken köpek tespit edildi." },
-                { url: "https://cdn.pixabay.com/photo/2014/04/13/20/49/cat-323262_1280.jpg", is_verified: true, score: 0.91, original_url: "https://cdn.pixabay.com/photo/2014/04/13/20/49/cat-323262_1280.jpg" }
+                { url: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800", is_verified: true, score: 0.96, original_url: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800" },
+                { url: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800", is_verified: false, score: 0.08, original_url: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800", reason: "Kedi görseli aranırken köpek tespit edildi." },
+                { url: "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=800", is_verified: true, score: 0.91, original_url: "https://images.unsplash.com/photo-1533738363-b7f9aef128ce?w=800" }
             ],
             "köpek": [
-                { url: "https://cdn.pixabay.com/photo/2016/11/14/17/39/dog-1824166_1280.jpg", is_verified: true, score: 0.95, original_url: "https://cdn.pixabay.com/photo/2016/11/14/17/39/dog-1824166_1280.jpg" },
-                { url: "https://cdn.pixabay.com/photo/2017/02/20/18/03/cat-2083492_1280.jpg", is_verified: false, score: 0.15, original_url: "https://cdn.pixabay.com/photo/2017/02/20/18/03/cat-2083492_1280.jpg", reason: "Köpek görseli aranırken kedi tespit edildi." },
-                { url: "https://cdn.pixabay.com/photo/2016/12/13/05/15/puppy-1903313_1280.jpg", is_verified: true, score: 0.89, original_url: "https://cdn.pixabay.com/photo/2016/12/13/05/15/puppy-1903313_1280.jpg" }
+                { url: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800", is_verified: true, score: 0.95, original_url: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=800" },
+                { url: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800", is_verified: false, score: 0.15, original_url: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=800", reason: "Köpek görseli aranırken kedi tespit edildi." },
+                { url: "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=800", is_verified: true, score: 0.89, original_url: "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=800" }
             ],
             "araba": [
-                { url: "https://cdn.pixabay.com/photo/2012/11/02/13/02/car-63930_1280.jpg", is_verified: true, score: 0.97, original_url: "https://cdn.pixabay.com/photo/2012/11/02/13/02/car-63930_1280.jpg" },
-                { url: "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885_1280.jpg", is_verified: false, score: 0.11, original_url: "https://cdn.pixabay.com/photo/2015/04/23/22/00/tree-736885_1280.jpg", reason: "Araba görseli aranırken ağaç tespit edildi." },
-                { url: "https://cdn.pixabay.com/photo/2016/11/22/23/44/porsche-1851246_1280.jpg", is_verified: true, score: 0.92, original_url: "https://cdn.pixabay.com/photo/2016/11/22/23/44/porsche-1851246_1280.jpg" }
+                { url: "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800", is_verified: true, score: 0.97, original_url: "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=800" },
+                { url: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800", is_verified: false, score: 0.11, original_url: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800", reason: "Araba görseli aranırken ağaç tespit edildi." },
+                { url: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800", is_verified: true, score: 0.92, original_url: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800" }
             ]
         };
 
@@ -257,6 +273,18 @@
             const [isLoading, setIsLoading] = useState(false);
             const [error, setError] = useState(null);
             const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+            const [selectedImageIds, setSelectedImageIds] = useState([]);
+            const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+            const [downloadProgress, setDownloadProgress] = useState(0);
+            const [isIndeterminate, setIsIndeterminate] = useState(false);
+            const [hasDownloadError, setHasDownloadError] = useState(false);
+
+            // Seçilen görsellerin ID'lerini tutan state
+            const [selectedImageIds, setSelectedImageIds] = useState([]);
+            // ZIP indirme durumunu tutan state (UI/UX kontrolleri için)
+            const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+            // ZIP indirme ilerleme yüzdesini tutan state (Progress Bar için)
+            const [downloadProgress, setDownloadProgress] = useState(0);
 
             // Trigger search initially on load
             useEffect(() => {
@@ -296,6 +324,7 @@
                 })
                 .then(data => {
                     setResults(data.results || []);
+                    setSelectedImageIds([]); // Arama tamamlandığında önceki seçimleri sıfırla
                     setActiveKeyword(data.search_keyword);
                     setTranslatedKeyword(data.translated_keyword);
                     setIsLoading(false);
@@ -316,10 +345,10 @@
                     if (!response.ok) throw new Error("Ağ yanıtı uygun değil.");
                     const blob = await response.blob();
                     const blobUrl = URL.createObjectURL(blob);
-                    
+
                     const link = document.createElement("a");
                     link.href = blobUrl;
-                    
+
                     // Determine file extension
                     let extension = "jpg";
                     const cleanUrl = url.split('?')[0].split('#')[0];
@@ -330,13 +359,13 @@
                             extension = ext;
                         }
                     }
-                    
+
                     link.download = `${imgId}.${extension}`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
                     URL.revokeObjectURL(blobUrl);
-                    
+
                     showToast(`Görsel (${imgId}) başarıyla indirildi!`);
                 } catch (err) {
                     console.warn("Blob indirme CORS veya ağ hatası nedeniyle yapılamadı, doğrudan link açılıyor...", err);
@@ -356,19 +385,217 @@
                 }
             };
 
+            // Backend'e POST isteği yapıp ZIP indirmeyi ve getReader() ile ilerleme takibini yapan fonksiyon
+            const handleDownloadZip = async () => {
+                if (selectedImageIds.length === 0) {
+                    showToast("Lütfen indirilecek en az bir görsel seçin.", "error");
+                    return;
+                }
+
+                setIsDownloadingZip(true);
+                setDownloadProgress(0);
+                setIsIndeterminate(false);
+                setHasDownloadError(false);
+                showToast(`${selectedImageIds.length} görsel indirilmek üzere ZIP paketi haline getiriliyor...`);
+
+                try {
+                    // Backend DownloadRequest payload yapısı
+                    const payload = {
+                        image_ids: selectedImageIds
+                    };
+
+                    // fetch API ile POST isteği atıp stream olarak okuyoruz
+                    const response = await fetch("http://127.0.0.1:8000/download-zip", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        let errorMsg = `Sunucu Hatası: ${response.status}`;
+                        try {
+                            const errData = await response.json();
+                            if (errData && errData.detail) {
+                                errorMsg = errData.detail;
+                            }
+                        } catch (e) {
+                            // JSON değilse varsayılan mesaj kullanılır
+                        }
+                        throw new Error(errorMsg);
+                    }
+
+                    // Content-Length header'ını alıp doğrula
+                    const contentLength = response.headers.get("content-length");
+                    let totalBytes = 0;
+                    if (contentLength) {
+                        totalBytes = parseInt(contentLength, 10);
+                    }
+
+                    // Boyut bilgisi yoksa indeterminate loading durumuna geç
+                    if (!totalBytes || isNaN(totalBytes)) {
+                        setIsIndeterminate(true);
+                    }
+
+                    const reader = response.body.getReader();
+                    const chunks = [];
+                    let receivedBytes = 0;
+
+                    // Akışı parça parça oku
+                    while (true) {
+                        const { done, value } = await reader.read();
+
+                        if (done) {
+                            break;
+                        }
+
+                        chunks.push(value);
+                        receivedBytes += value.length;
+
+                        if (totalBytes > 0) {
+                            const percent = Math.round((receivedBytes / totalBytes) * 100);
+                            setDownloadProgress(percent);
+                        }
+                    }
+
+                    // Chunk'ları birleştirip Blob oluştur
+                    const blob = new Blob(chunks, { type: "application/zip" });
+                    const blobUrl = window.URL.createObjectURL(blob);
+
+                    const link = document.createElement("a");
+                    link.href = blobUrl;
+                    link.download = "picfetch_indirilenler.zip";
+                    document.body.appendChild(link);
+                    link.click();
+
+                    document.body.removeChild(link);
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(blobUrl);
+                    }, 1000);
+
+                    showToast("ZIP dosyası başarıyla indirildi!", "success");
+
+                    // Başarılı indirme sonrasında durumları sıfırla
+                    setIsDownloadingZip(false);
+                    setDownloadProgress(0);
+                    setIsIndeterminate(false);
+                } catch (err) {
+                    console.error("Toplu ZIP indirme hatası:", err);
+                    setHasDownloadError(true);
+                    setDownloadProgress(0);
+                    showToast(`İndirme başarısız: ${err.message || "Bağlantı hatası"}`, "error");
+
+                    // Hata durumunu kullanıcının fark etmesi için 3.5 saniye sonra progress bar'ı kaldır
+                    setTimeout(() => {
+                        setIsDownloadingZip(false);
+                        setDownloadProgress(0);
+                        setIsIndeterminate(false);
+                        setHasDownloadError(false);
+                    }, 3500);
+                }
+            };
+
+            // Görsellerin tamamını seçen ya da seçimi kaldıran yardımcı fonksiyon
+            const toggleSelectAll = () => {
+                if (selectedImageIds.length === verifiedImages.length) {
+                    setSelectedImageIds([]);
+                } else {
+                    setSelectedImageIds(verifiedImages.map(img => img.image_id));
+                }
+            };
+
             const verifiedImages = results.filter(item => item.is_verified);
             const discardedImages = results.filter(item => !item.is_verified);
 
+            // Backend'e POST isteği yapıp ZIP indirmeyi ve ilerleme takibini yapan fonksiyon
+            const handleDownloadZip = async () => {
+                if (selectedImageIds.length === 0) {
+                    showToast("Lütfen indirilecek en az bir görsel seçin.", "error");
+                    return;
+                }
+
+                setIsDownloadingZip(true);
+                setDownloadProgress(0);
+                showToast(`${selectedImageIds.length} görsel indirilmek üzere ZIP paketi haline getiriliyor...`);
+
+                try {
+                    // Backend DownloadZipRequest payload yapısı
+                    const payload = {
+                        selectedImageIds: selectedImageIds,
+                        images: results.map(img => ({
+                            id: img.image_id,
+                            url: img.original_url
+                        }))
+                    };
+
+                    // Axios ile POST isteği atıp responseType'ı 'blob' ve ilerleme takibini yapıyoruz
+                    const response = await axios.post(
+                        "http://127.0.0.1:8000/api/v1/images/download-zip",
+                        payload,
+                        {
+                            responseType: 'blob',
+                            onDownloadProgress: (progressEvent) => {
+                                if (progressEvent.total) {
+                                    const percentCompleted = Math.round(
+                                        (progressEvent.loaded * 100) / progressEvent.total
+                                    );
+                                    setDownloadProgress(percentCompleted);
+                                } else {
+                                    // Eğer response headers'da content-length yoksa yapay bir ilerleme gösterelim
+                                    setDownloadProgress(prev => Math.min(prev + 10, 95));
+                                }
+                            }
+                        }
+                    );
+
+                    // Axios responseType: 'blob' ayarı nedeniyle response.data zaten bir Blob nesnesidir.
+                    // Ekstradan new Blob([]) içine sarmak bazı tarayıcılarda yapıyı bozabilir.
+                    const blob = response.data;
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    
+                    const link = document.createElement("a");
+                    link.href = blobUrl;
+                    link.download = "secili_gorseller.zip";
+                    document.body.appendChild(link);
+                    link.click();
+                    
+                    // Tarayıcının dosyayı okumaya başlaması için DOM temizliğini ve URL iptalini
+                    // setTimeout ile bir sonraki gecikmeye bırakıyoruz (anında iptal dosya bozulmasına yol açabilir).
+                    document.body.removeChild(link);
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(blobUrl);
+                    }, 1000);
+                    
+                    showToast("ZIP dosyası başarıyla indirildi!", "success");
+                } catch (err) {
+                    console.error("Toplu ZIP indirme hatası:", err);
+                    showToast("ZIP indirilirken bir hata oluştu.", "error");
+                } finally {
+                    // Hata veya başarı durumlarında arayüzü eski haline döndürüyoruz
+                    setIsDownloadingZip(false);
+                    setDownloadProgress(0);
+                }
+            };
+
+            // Görsellerin tamamını seçen ya da seçimi kaldıran yardımcı fonksiyon
+            const toggleSelectAll = () => {
+                if (selectedImageIds.length === verifiedImages.length) {
+                    setSelectedImageIds([]);
+                } else {
+                    setSelectedImageIds(verifiedImages.map(img => img.image_id));
+                }
+            };
+
             return (
                 <div className="space-y-8 pb-12 animate-fade-in">
-                    
+
                     {/* TOAST NOTIFICATION */}
                     {toast.show && (
-                        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl transition-all duration-300 transform scale-100 backdrop-blur-xl border border-white/10 ${
-                            toast.type === 'error' 
-                                ? 'bg-red-950/80 text-red-300 shadow-red-950/40' 
+                        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl transition-all duration-300 transform scale-100 backdrop-blur-xl border border-white/10 ${toast.type === 'error'
+                                ? 'bg-red-950/80 text-red-300 shadow-red-950/40'
                                 : 'bg-purple-950/80 text-purple-200 shadow-purple-950/40'
-                        }`}>
+                            }`}>
                             {toast.type === 'error' ? <IconAlertCircle /> : <IconCheckCircle2 />}
                             <span className="text-sm font-semibold tracking-wide">{toast.message}</span>
                         </div>
@@ -386,7 +613,7 @@
                             </h1>
                             <p className="text-sm text-slate-400 mt-1 font-light">Yapay zeka nesne algılama boru hattı ile arındırılmış görsel sonuçları.</p>
                         </div>
-                        
+
                         {/* API Status Badge */}
                         <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-2 w-fit backdrop-blur-md shadow-lg shadow-black/20">
                             <span className="relative flex h-2.5 w-2.5">
@@ -403,7 +630,7 @@
                             <div className="ml-4 flex items-center justify-center">
                                 <IconSearch />
                             </div>
-                            <input 
+                            <input
                                 type="text"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
@@ -411,7 +638,7 @@
                                 placeholder="Aramak istediğiniz nesneyi yazın (örn: kedi, köpek, araba)..."
                                 className="w-full bg-transparent border-0 outline-none text-white placeholder-slate-500 px-3 py-3.5 text-sm sm:text-base font-normal"
                             />
-                            <button 
+                            <button
                                 onClick={() => handleSearch()}
                                 disabled={isLoading}
                                 className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-sm sm:text-base px-6 sm:px-8 py-3.5 rounded-full transition-all duration-300 flex items-center gap-2 active:scale-95 disabled:opacity-50 shadow-[0_0_20px_rgba(168,85,247,0.35)]"
@@ -437,11 +664,10 @@
                                         setQuery(keyword);
                                         handleSearch(keyword);
                                     }}
-                                    className={`text-xs px-4 py-2 rounded-full font-semibold transition-all duration-300 border ${
-                                        activeKeyword === keyword 
-                                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-[0_0_15px_rgba(168,85,247,0.35)] scale-105' 
+                                    className={`text-xs px-4 py-2 rounded-full font-semibold transition-all duration-300 border ${activeKeyword === keyword
+                                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-[0_0_15px_rgba(168,85,247,0.35)] scale-105'
                                             : 'bg-white/5 text-slate-300 border-white/10 hover:border-purple-500/50 hover:bg-white/10'
-                                    }`}
+                                        }`}
                                 >
                                     {keyword.charAt(0).toUpperCase() + keyword.slice(1)}
                                 </button>
@@ -451,7 +677,7 @@
 
                     {/* ANA ÇALIŞMA ALANI (İKİ BÖLMELİ GRID) */}
                     <div className="grid grid-cols-1 lg:grid-cols-10 gap-8 items-start mt-8">
-                        
+
                         {/* SOL BÖLME: ONAYLANAN GÖRSELLER (70%) */}
                         <main className="lg:col-span-7 space-y-6">
                             <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -461,9 +687,19 @@
                                         {error ? '0' : verifiedImages.length} Görsel
                                     </span>
                                 </div>
-                                <div className="text-xs text-slate-400 font-medium">
-                                    Aranan Kelime: <span className="text-purple-400 underline font-semibold">{activeKeyword}</span> 
-                                    {translatedKeyword && ` (AI Çevirisi: ${translatedKeyword})`}
+                                <div className="flex items-center gap-4 text-xs">
+                                    {verifiedImages.length > 0 && (
+                                        <button
+                                            onClick={toggleSelectAll}
+                                            className="text-purple-400 hover:text-purple-300 font-semibold transition-colors duration-200 bg-purple-500/10 border border-purple-500/20 px-3.5 py-1.5 rounded-xl hover:bg-purple-500/20 active:scale-95 animate-fade-in"
+                                        >
+                                            {selectedImageIds.length === verifiedImages.length ? "Seçimi Kaldır" : "Tümünü Seç"}
+                                        </button>
+                                    )}
+                                    <div className="text-slate-400 font-medium hidden sm:block">
+                                        Aranan Kelime: <span className="text-purple-400 underline font-semibold">{activeKeyword}</span>
+                                        {translatedKeyword && ` (AI Çevirisi: ${translatedKeyword})`}
+                                    </div>
                                 </div>
                             </div>
 
@@ -474,7 +710,7 @@
                                     </div>
                                     <h3 className="font-serif text-lg font-bold text-rose-450">Arama Sırasında Hata Oluştu</h3>
                                     <p className="text-xs text-rose-350 mt-2 max-w-md mx-auto">{error}</p>
-                                    <button 
+                                    <button
                                         onClick={() => handleSearch(activeKeyword)}
                                         className="mt-6 bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 font-semibold text-xs py-2.5 px-6 rounded-xl border border-rose-500/30 transition-all active:scale-95 inline-flex items-center gap-2"
                                     >
@@ -496,28 +732,50 @@
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     {verifiedImages.map((img, index) => {
                                         const imgId = img.image_id || `img_${index + 1}`;
+                                        const isSelected = selectedImageIds.includes(imgId);
                                         return (
-                                            <div key={index} className="glass-card-verified rounded-3xl overflow-hidden flex flex-col">
+                                            <div 
+                                                key={index} 
+                                                className={`glass-card-verified rounded-3xl overflow-hidden flex flex-col transition-all duration-300 border ${
+                                                    isSelected 
+                                                        ? 'border-purple-500/80 shadow-[0_0_30px_rgba(168,85,247,0.28)] scale-[1.015]' 
+                                                        : 'border-white/5'
+                                                }`}
+                                            >
                                                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-900 group">
-                                                    <img 
-                                                        src={img.original_url} 
+                                                    <img
+                                                        src={img.original_url}
                                                         alt={activeKeyword}
                                                         className="w-full h-full object-cover transition-all duration-750 group-hover:scale-105"
                                                         onError={(e) => {
                                                             e.target.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600';
                                                         }}
                                                     />
-                                                    
+
                                                     {/* AI Güven Skoru Rozeti */}
                                                     <div className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md text-white rounded-full py-1.5 px-3.5 flex items-center gap-1.5 shadow-md border border-white/10">
                                                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                                                         <span className="text-xs font-semibold text-emerald-400">%{Math.round(img.confidence_score * 100)} Güven</span>
                                                     </div>
 
-                                                    {/* Onay tiki */}
-                                                    <div className="absolute top-3 right-3 bg-emerald-500 text-white rounded-full p-1.5 shadow-lg shadow-emerald-500/30 flex items-center justify-center border border-emerald-400/40">
+                                                    {/* Seçim Dairesi / Checkbox */}
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedImageIds(prev => 
+                                                                prev.includes(imgId) 
+                                                                    ? prev.filter(id => id !== imgId) 
+                                                                    : [...prev, imgId]
+                                                            );
+                                                        }}
+                                                        className={`absolute top-3 right-3 rounded-full p-1.5 shadow-lg transition-all duration-300 flex items-center justify-center border ${
+                                                            isSelected 
+                                                                ? 'bg-purple-600 border-purple-400 text-white shadow-purple-600/50 scale-110' 
+                                                                : 'bg-slate-950/80 border-white/10 text-slate-450 hover:border-purple-500/50 hover:text-white'
+                                                        }`}
+                                                    >
                                                         <IconCheck />
-                                                    </div>
+                                                    </button>
                                                 </div>
 
                                                 <div className="p-5 flex-1 flex flex-col justify-between gap-4 bg-gradient-to-b from-transparent to-white/[0.02]">
@@ -530,8 +788,8 @@
                                                             Kaynak URL: <a href={img.original_url} target="_blank" rel="noreferrer" className="text-purple-400 hover:text-pink-400 transition-colors duration-200">{img.original_url}</a>
                                                         </div>
                                                     </div>
-                                                    
-                                                    <button 
+
+                                                    <button
                                                         onClick={() => handleDownload(imgId, img.original_url)}
                                                         className="w-full bg-purple-500/10 hover:bg-purple-500/25 text-purple-300 font-semibold text-xs py-3 px-4 rounded-xl transition-all duration-200 border border-purple-500/30 flex items-center justify-center gap-1.5 group active:scale-95 hover:shadow-[0_0_15px_rgba(168,85,247,0.15)]"
                                                     >
@@ -549,10 +807,10 @@
                         {/* SAĞ BÖLME: YAPAY ZEKA TARAFINDAN ELENEN GÖRSELLER (30%) */}
                         <aside className="lg:col-span-3 space-y-4">
                             <div className="glass-panel rounded-[32px] p-6 relative overflow-hidden">
-                                
+
                                 {/* Background design element */}
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/10 rounded-full blur-2xl -z-10 animate-pulse"></div>
-                                
+
                                 <div className="border-b border-white/10 pb-4 mb-4">
                                     <div className="flex items-center gap-2">
                                         <div className="bg-rose-500/20 text-rose-400 rounded-lg p-1 border border-rose-500/30">
@@ -583,18 +841,18 @@
                                             const imgId = img.image_id || `img_elenen_${index + 1}`;
                                             return (
                                                 <div key={index} className="glass-card-discarded rounded-2xl overflow-hidden p-3.5 relative flex flex-col gap-3">
-                                                    
+
                                                     {/* Image header with badged low confidence */}
                                                     <div className="relative aspect-[3/2] w-full rounded-xl overflow-hidden bg-slate-950">
-                                                        <img 
-                                                            src={img.original_url} 
+                                                        <img
+                                                            src={img.original_url}
                                                             alt="Elenen"
                                                             className="w-full h-full object-cover filter grayscale-[50%] brightness-75 contrast-125"
                                                             onError={(e) => {
                                                                 e.target.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600';
                                                             }}
                                                         />
-                                                        
+
                                                         {/* Kırmızı X işareti */}
                                                         <div className="absolute top-2.5 right-2.5 bg-rose-500 text-white rounded-full p-1.5 shadow-md shadow-rose-500/30 flex items-center justify-center border border-rose-400/40">
                                                             <IconX />
@@ -616,13 +874,13 @@
                                                             <p className="text-[11px] text-rose-350 leading-normal bg-rose-500/5 border border-rose-500/10 rounded-lg p-2.5 italic font-light">
                                                                 {`"${activeKeyword.charAt(0).toUpperCase() + activeKeyword.slice(1)}" aranırken nesne doğrulanamadı.`}
                                                             </p>
-                                                            
+
                                                             <div className="text-[10px] text-slate-400 truncate">
                                                                 Kaynak URL: <a href={img.original_url} target="_blank" rel="noreferrer" className="text-slate-450 hover:text-rose-400 transition-colors duration-200">{img.original_url}</a>
                                                             </div>
                                                         </div>
 
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleDownload(imgId, img.original_url)}
                                                             className="w-full bg-rose-500/10 hover:bg-rose-500/25 text-rose-300 font-semibold text-xs py-2.5 px-4 rounded-xl transition-all duration-200 border border-rose-500/30 flex items-center justify-center gap-1.5 group active:scale-95 hover:shadow-[0_0_15px_rgba(239,68,68,0.15)]"
                                                         >
@@ -640,6 +898,82 @@
 
                     </div>
 
+                    {/* FLOATING ACTION BAR FOR BULK DOWNLOAD */}
+                    {(selectedImageIds.length > 0 || isDownloadingZip) && (
+                        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 w-[90%] max-w-2xl bg-slate-950/85 backdrop-blur-2xl border border-purple-500/30 rounded-3xl p-5 shadow-[0_20px_50px_rgba(0,0,0,0.8)] shadow-purple-950/20 flex flex-col gap-4 animate-fade-in">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-semibold text-white">
+                                        {selectedImageIds.length} Görsel Seçildi
+                                    </span>
+                                    <span className="text-xs text-slate-400">
+                                        Seçilen görselleri tek bir ZIP dosyası olarak indirebilirsiniz.
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => setSelectedImageIds([])}
+                                        disabled={isDownloadingZip}
+                                        className="text-xs text-slate-400 hover:text-white transition-colors duration-200 px-3 py-2 rounded-xl hover:bg-white/5 disabled:opacity-50"
+                                    >
+                                        Seçimi Temizle
+                                    </button>
+                                    <button
+                                        onClick={handleDownloadZip}
+                                        disabled={isDownloadingZip}
+                                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-xs sm:text-sm py-3 px-6 rounded-2xl transition-all duration-300 flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(168,85,247,0.3)] shrink-0"
+                                    >
+                                        {isDownloadingZip ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                                <span>İndiriliyor...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <IconDownload />
+                                                <span>ZIP Olarak İndir</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            
+                            {/* PROGRESS BAR COMPONENT */}
+                            {isDownloadingZip && (
+                                <div className="w-full space-y-2 mt-1">
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className={`font-medium ${hasDownloadError ? 'text-rose-500 animate-none' : 'text-purple-400 animate-pulse'}`}>
+                                            {hasDownloadError
+                                                ? "İndirme başarısız oldu!"
+                                                : isIndeterminate
+                                                    ? "ZIP arşivi hazırlanıyor ve indiriliyor (Boyut hesaplanamıyor)..."
+                                                    : "ZIP arşivi indiriliyor..."}
+                                        </span>
+                                        <span className={`font-bold ${hasDownloadError ? 'text-rose-500' : 'text-purple-300'}`}>
+                                            {hasDownloadError
+                                                ? "Hata"
+                                                : isIndeterminate
+                                                    ? "İndiriliyor..."
+                                                    : `${downloadProgress}%`}
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-slate-900/80 rounded-full h-2.5 overflow-hidden p-[1px] border border-white/5">
+                                        <div
+                                            className={`h-full rounded-full transition-all duration-300 ease-out ${hasDownloadError
+                                                    ? 'bg-gradient-to-r from-red-500 via-rose-500 to-red-600'
+                                                    : isIndeterminate
+                                                        ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 animate-pulse'
+                                                        : 'bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500'
+                                                }`}
+                                            style={{ width: hasDownloadError ? '100%' : isIndeterminate ? '100%' : `${downloadProgress}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* SUNUM / MENTÖR NOTU */}
                     <footer className="mt-12 bg-white/5 border border-white/10 rounded-3xl p-6 flex flex-col md:flex-row items-center gap-6 justify-between backdrop-blur-md shadow-2xl">
                         <div className="space-y-1 max-w-3xl">
@@ -652,7 +986,7 @@
                             </p>
                         </div>
                         <div className="text-xs text-slate-500 text-right shrink-0 font-medium">
-                             PicFetch Projesi &copy; 2026. Tüm hakları saklıdir.
+                            PicFetch Projesi &copy; 2026. Tüm hakları saklıdir.
                         </div>
                     </footer>
 
@@ -664,4 +998,5 @@
         root.render(<SearchPage />);
     </script>
 </body>
+
 </html>
