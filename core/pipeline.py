@@ -10,7 +10,8 @@ import shutil
 from pathlib import Path
 from typing import List, Dict, Any
 from .mapping import translate_to_english
-from .search import ImageSearcher
+from .search import search_images
+from .fetch import download_image
 from .detector import ObjectDetector
 from .cleanup import cleanup_downloads
 from .config import get_config
@@ -31,7 +32,6 @@ class ImagePipeline:
         config = get_config()
         
         # Modülleri başlat
-        self.searcher = ImageSearcher()
         self.detector = ObjectDetector()
         self.confidence_threshold = config.get("confidence_threshold", 0.5)
         self.max_images = config.get("max_images", 10)
@@ -70,10 +70,10 @@ class ImagePipeline:
             print(f"   ✅ '{turkish_query}' → '{english_query}'")
             
             # ADIM 2: Görsel arama
-            print(f"\n2️⃣ Pixabay'de '{english_query}' aranıyor...")
-            image_urls = self.searcher.search_images(
+            print(f"\n2️⃣ DuckDuckGo'da '{english_query}' aranıyor...")
+            image_urls = search_images(
                 query=english_query,
-                per_page=self.max_images
+                limit=self.max_images
             )
             print(f"   ✅ {len(image_urls)} görsel bulundu")
             
@@ -92,16 +92,10 @@ class ImagePipeline:
                 print(f"\n   📥 Görsel {idx}/{len(image_urls)} indiriliyor...")
                 
                 # Görseli indir
-                filepath = self.searcher.download_image(url)
+                filepath = download_image(url)
                 
                 if not filepath:
                     print(f"   ⚠️ İndirme başarısız, atlanıyor...")
-                    continue
-                
-                # Görselin geçerli olduğunu kontrol et
-                if not self.searcher.is_valid_image(filepath):
-                    print(f"   ⚠️ Bozuk dosya, siliniyor...")
-                    Path(filepath).unlink(missing_ok=True)
                     continue
                 
                 print(f"   ✅ İndirildi: {filepath}")
